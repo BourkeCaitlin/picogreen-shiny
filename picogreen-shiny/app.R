@@ -10,7 +10,7 @@ ui <- fluidPage(
   # Application title
 
     
-  h1("Calculating DNA concentration using the picogreen assay:", style="color:#81A78C;  padding:7px; font-weight: bold; font-family: Lobster"),
+  h1("Calculating DNA concentration using the picogreen assay:", style="color:#81A78C;  padding:7px; font-weight: bold; "),
   
   # Sidebar setup 
   sidebarLayout(
