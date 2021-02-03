@@ -1,0 +1,39 @@
+---
+title: "Report of BCA processing"
+output: 
+  html_document:
+    theme: cosmo
+    code_folding: hide
+params:
+  plotstdcurve: NA
+  list_calculations: NA
+  platename: NA
+  factor.plot: NA
+---
+#### `r params$platename`
+#### `r Sys.Date()`
+
+
+### Calculations
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = F)
+library(tidyverse)
+library(knitr)
+```
+
+```{r}
+kable(params$list_calculations)
+```
+
+
+### Plot of standard curve
+```{r}
+params$plotstdcurve
+```
+
+
+### Sample concentrations
+```{r}
+params$factor.plot
+```
+

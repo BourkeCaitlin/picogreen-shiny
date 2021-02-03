@@ -8,33 +8,38 @@ ui <- fluidPage(
   theme = shinytheme("cosmo"),
   
   # Application title
-  titlePanel("Calculating DNA concentration using the picogreen assay:"),
+
+    
+  h1("Calculating DNA concentration using the picogreen assay:", style="color:#81A78C;  padding:7px; font-weight: bold; font-family: Lobster"),
   
   # Sidebar setup 
   sidebarLayout(
     sidebarPanel(
       textInput(inputId = "platename",
-                label = "Plate Name:",
+                label = "Plate name:",
                 value = "Who am I?"),
       textInput(inputId = "date",
                 label = "Date:",
                 value = Sys.Date()),
       fileInput(inputId = "fluor",
-                label = "Fluorescence readings (csv only):",
+                label = "Fluorescence readings:",
                 accept = ".csv"),
       fileInput(inputId = "platelayout",
-                label = "Plate layout of sampleIDs (csv only):",
+                label = "Plate layout of sampleIDs:",
                 accept = ".csv"),
       numericInput(inputId = "dilution",
                    label = "Volume (uL) of sample added to dye/TE solution:",
-                   value = 1)
+                   value = 1),
+      downloadButton("report", "Generate full report")
+      
     ),
     
     # Show a plot of the generated distribution
     mainPanel(
       plotOutput("std.curve.plot"),
-      DTOutput("calculations")
-      
+      DTOutput("calculations"),
+      plotOutput("plot.factor.grid")
+  
     )
   )
 )
@@ -48,7 +53,7 @@ server <- function(input, output, session) {
     ext <- tools::file_ext(input$fluor$name)
     switch(ext,
            csv = vroom::vroom(input$fluor$datapath, delim = ","),
-           xlsx = readxl::read_excel(input$fluor$datapath, sheet = "Results"),
+           xlsx = readxl::read_excel(input$fluor$datapath),
            validate("Invalid file; Please upload a .csv or .xlsx file")
     )
   })
@@ -58,7 +63,7 @@ server <- function(input, output, session) {
     ext <- tools::file_ext(input$platelayout$name)
     switch(ext,
            csv = vroom::vroom(input$platelayout$datapath, delim = ","),
-           xlsx = readxl::read_excel(input$platelayout$datapath, sheet = "Results"),
+           xlsx = readxl::read_excel(input$platelayout$datapath),
            validate("Invalid file; Please upload a .csv or .xlsx file")
     )
   })
@@ -95,21 +100,44 @@ standards <- reactive({
       as.numeric()
 })
 
-  adj.fluor <- reactive({
+  adj.fluor.stds <- reactive({
     standards() %>%
       mutate(adj=m-background()) %>%
       mutate(val=stand.val)
   })
 
-  stdcurve <- reactive({lm(val ~ adj, data = adj.fluor()) })
+  stdcurve <- reactive({lm(val ~ adj, data = adj.fluor.stds()) })
   intercept <- reactive({as.numeric(stdcurve()$coefficients[1])})
   slope <- reactive({as.numeric(stdcurve()$coefficients[2])})
   fit <-reactive({summary(stdcurve()) })
-
+  
+  stdcurve_plot <- reactive({
+    adj.fluor.stds() %>%
+      dplyr::filter(!sample=="S8") %>%
+      ggplot(aes(x = adj, y = val))+
+      geom_point()+
+      geom_smooth(method="lm", se = F, colour = "grey")+
+      annotate(geom="text", x=5e06, y=0.6, label=paste0("y = ", round(slope(), digits = 8), "x + ", round(intercept(), digits = 5)),
+               color="black")+
+      annotate(geom="text", x=5e06, y=0.5, label=paste0("r.squared = ", round(fit()$r.squared, digits = 4)),
+               color="black")+
+      labs(title = input$platename, subtitle = input$date)+
+      theme_linedraw()
+  })
+  
   calculated.conc <- reactive({
     all() %>%
-      mutate(conc =(slope*all$adjFluor+intercept)*200/input$dilution) %>%
-      dplyr::select(Location, sample, Fluorescence, conc) %>%
+      mutate(adjFluor = Fluorescence - background()) %>% 
+      mutate(`concDNA(ng/ul)` =(slope()*adjFluor+intercept())*200/input$dilution) %>%
+      dplyr::select(Location, sample, Fluorescence,adjFluor, `concDNA(ng/ul)`, Row, column)
+  })
+  
+  
+  DT.values <- reactive({
+    calculated.conc() %>% 
+      dplyr::select(Location, sample, Fluorescence,adjFluor, `concDNA(ng/ul)`) %>% 
+      filter(!sample=="B") %>%
+      filter(!str_detect(sample, "S")) %>%
       datatable(extensions = "Buttons",
                 options = list(dom = "frtipB",
                                buttons = list(
@@ -119,25 +147,54 @@ standards <- reactive({
                                    text = "Download table values"))),
                 rownames = F,
                 style = "bootstrap")
-      #formatRound(columns = 2:8, digits=3)
-
   })
+  
+  factor.plot <- reactive({
+    calculated.conc() %>% 
+      mutate(conc_bin = cut(`concDNA(ng/ul)`, breaks = c(-Inf, 2, 5, 10, 20, 40, Inf))) %>% 
+      mutate(row = factor(Row, levels = c( "H", "G", "F", "E", "D", "C", "B", "A"))) %>%
+      ggplot(mapping = aes(x = as.numeric(column), y = factor(Row), fill = conc_bin))+
+      geom_tile(colour = "white") +
+      scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))+
+      scale_fill_manual(values = c("#FBE0D3","#D1DDE6","#ACC3D1",   "#38808F","#661F3F", "#F56D65"  ))+
+      theme_linedraw()+
+      labs(x = "columns", y = "rows" )
+  })
+  
+  
+  
+  
+  
+##### create output objects for display in the ui -----------------------------  
 
-output$std.curve.plot <- plotOutput({
-    adj.fluor() %>%
-    filter(!sample=="S8") %>%
-    ggplot(aes(x = adj, y = val))+
-    geom_point()+
-    geom_smooth(method="lm", se = F)+
-    # annotate(geom="text", x=100, y=0.55, label=paste0("y = ", round(slope, digits = 8), "x + ", round(intercept, digits = 5)),
-    #          color="black")+
-    # annotate(geom="text", x=60000, y=0.65, label=paste0("r.squared = ", round(fit$r.squared, digits = 4)),
-    #          color="black")+
-    theme_linedraw()
+output$std.curve.plot <-renderPlot({
+  stdcurve_plot()
 })
 
-  output$calculations <- renderDataTable({calculated.conc()})
+output$calculations <- renderDataTable({DT.values()})
 
+
+output$plot.factor.grid <-renderPlot({
+  factor.plot()
+})
+
+output$report <- downloadHandler(
+  filename = paste0(Sys.Date(),"_picogreen-report.html"),
+  content = function(file) {
+    tempReport <- file.path(tempdir(), "report.Rmd")
+    file.copy("report.Rmd", tempReport, overwrite = TRUE)
+    params <- list(plotstdcurve = stdcurve_plot(),
+                   list_calculations = calculated.conc(),
+                   platename = input$platename,
+                  factor.plot = factor.plot())
+                   
+    rmarkdown::render(tempReport, 
+                      output_file = file,
+                      params = params,
+                      envir = new.env(parent = globalenv()),
+    )
+  }
+)
 
 }
 
