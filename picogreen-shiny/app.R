@@ -3,14 +3,15 @@ library(shiny)
 library(shinythemes)
 library(tidyverse)
 library(DT)
+library(bslib)
 
 ui <- fluidPage(
-  theme = shinytheme("cosmo"),
+  theme = bslib::bs_theme(version = 4, "flatly"),
   
   # Application title
 
     
-  h1("Picogreen DNA calculations:", style="color:#214455;  padding:7px; font-weight: bold; "),
+  h1("PICOGREEN CALCULATION OF DNA CONCENTRATION :", style="color:#214455;  padding:15px; font-weight: bold; font: rockwell; letter-spacing: 5px"),
   
   
   
@@ -140,17 +141,10 @@ standards <- reactive({
     calculated.conc() %>% 
       dplyr::select(Location, sample, Fluorescence,adjFluor, `concDNA(ng/ul)`) %>% 
       filter(!sample=="B") %>%
-      filter(!str_detect(sample, "S")) %>%
-      datatable(extensions = "Buttons",
-                options = list(dom = "frtipB",
-                               pageLength = 96,
-                               buttons = list(
-                                 list(
-                                   extend = "collection",
-                                   buttons = c("csv", "excel"),
-                                   text = "Download table values"))),
-                rownames = F,
-                style = "bootstrap")
+      filter(!str_detect(sample, "S")) %>% 
+      datatable() %>% 
+      formatRound(columns  = 5, digits = 3)
+      
   })
   
   factor.plot <- reactive({
@@ -162,7 +156,7 @@ standards <- reactive({
       scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))+
       scale_fill_manual(values = c("#FBE0D3","#D1DDE6","#ACC3D1",   "#38808F","#661F3F", "#F56D65"  ))+
       theme_linedraw()+
-      labs(x = "columns", y = "rows" )
+      labs(x = "columns", y = "rows" ,fill = "DNA conc (ng/uL)")
   })
   
   
@@ -191,7 +185,6 @@ output$report <- downloadHandler(
                    list_calculations = calculated.conc(),
                    platename = input$platename,
                   factor.plot = factor.plot())
-                   
     rmarkdown::render(tempReport, 
                       output_file = file,
                       params = params,

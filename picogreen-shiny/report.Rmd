@@ -22,10 +22,19 @@ library(knitr)
 ```
 
 ```{r}
-kable(params$list_calculations %>% 
+datatable(params$list_calculations %>% 
       dplyr::select(Location, sample, Fluorescence,adjFluor, `concDNA(ng/ul)`) %>% 
       filter(!sample=="B") %>%
-      filter(!str_detect(sample, "S")))
+      filter(!str_detect(sample, "S")), extensions = "Buttons",
+                options = list(dom = "frtipB",
+                               pageLength = 96,
+                               buttons = list(
+                                 list(
+                                   extend = "collection",
+                                   buttons = c("csv", "excel"),
+                                   text = "Download table values"))),
+                rownames = F,
+                style = "bootstrap")
 ```
 
 

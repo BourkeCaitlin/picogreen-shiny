@@ -1,9 +1,9 @@
 # picogreen-shiny
 A shiny interface for use with the picogreen assay to determine DNA concentration for a plate of samples.
 
-* flip y axis (done)
-* remove csv/excel - but include in rmd 
-* change colour bin label 
-* DT in Rmd file
-* write csv and Rds in Rmd report
-* round to 3
+* flip y axis (yes)
+* remove csv/excel - but include in rmd  (yes)
+* change colour bin label (yes)
+* DT in Rmd file (yes)
+* write csv and Rds in Rmd report (unsure)
+* round to 3 (yes)
