@@ -13,7 +13,7 @@ params:
 #### `r params$platename`
 #### `r Sys.Date()`
 
-
+##   {.tabset}
 ### Calculations
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = F)
@@ -22,7 +22,10 @@ library(knitr)
 ```
 
 ```{r}
-kable(params$list_calculations)
+kable(params$list_calculations %>% 
+      dplyr::select(Location, sample, Fluorescence,adjFluor, `concDNA(ng/ul)`) %>% 
+      filter(!sample=="B") %>%
+      filter(!str_detect(sample, "S")))
 ```
 
 
@@ -35,5 +38,9 @@ params$plotstdcurve
 ### Sample concentrations
 ```{r}
 params$factor.plot
+```
+
+```{r}
+write.csv(params$list_calculations, file = paste0(params$platename,".csv"))
 ```
 

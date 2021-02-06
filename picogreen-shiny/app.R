@@ -10,11 +10,14 @@ ui <- fluidPage(
   # Application title
 
     
-  h1("Calculating DNA concentration using the picogreen assay:", style="color:#81A78C;  padding:7px; font-weight: bold; "),
+  h1("Picogreen DNA calculations:", style="color:#214455;  padding:7px; font-weight: bold; "),
+  
+  
   
   # Sidebar setup 
   sidebarLayout(
     sidebarPanel(
+      tags$style(".well {background-color:#C2E3D3;}"),
       textInput(inputId = "platename",
                 label = "Plate name:",
                 value = "Who am I?"),
@@ -116,7 +119,7 @@ standards <- reactive({
       dplyr::filter(!sample=="S8") %>%
       ggplot(aes(x = adj, y = val))+
       geom_point()+
-      geom_smooth(method="lm", se = F, colour = "grey")+
+      geom_smooth(method="lm", se = F, colour = "#00A7A3")+
       annotate(geom="text", x=5e06, y=0.6, label=paste0("y = ", round(slope(), digits = 8), "x + ", round(intercept(), digits = 5)),
                color="black")+
       annotate(geom="text", x=5e06, y=0.5, label=paste0("r.squared = ", round(fit()$r.squared, digits = 4)),
@@ -140,6 +143,7 @@ standards <- reactive({
       filter(!str_detect(sample, "S")) %>%
       datatable(extensions = "Buttons",
                 options = list(dom = "frtipB",
+                               pageLength = 96,
                                buttons = list(
                                  list(
                                    extend = "collection",
@@ -153,7 +157,7 @@ standards <- reactive({
     calculated.conc() %>% 
       mutate(conc_bin = cut(`concDNA(ng/ul)`, breaks = c(-Inf, 2, 5, 10, 20, 40, Inf))) %>% 
       mutate(row = factor(Row, levels = c( "H", "G", "F", "E", "D", "C", "B", "A"))) %>%
-      ggplot(mapping = aes(x = as.numeric(column), y = factor(Row), fill = conc_bin))+
+      ggplot(mapping = aes(x = as.numeric(column), y = factor(row), fill = conc_bin))+
       geom_tile(colour = "white") +
       scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))+
       scale_fill_manual(values = c("#FBE0D3","#D1DDE6","#ACC3D1",   "#38808F","#661F3F", "#F56D65"  ))+
