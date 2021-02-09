@@ -7,3 +7,6 @@ A shiny interface for use with the picogreen assay to determine DNA concentratio
 * DT in Rmd file (yes)
 * write csv and Rds in Rmd report (unsure)
 * round to 3 (yes)
+
+** in plate plot make a colour for the wells that are assigned are BLANK = B
+** and leave light pink
