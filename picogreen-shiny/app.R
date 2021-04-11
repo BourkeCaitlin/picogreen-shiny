@@ -10,7 +10,6 @@ ui <- fluidPage(
   
   # Application title
 
-    
   h1("PICOGREEN CALCULATION OF DNA CONCENTRATION :", style="color:#214455;  padding:15px; font-weight: bold; font: rockwell; letter-spacing: 5px"),
   
   
@@ -150,11 +149,22 @@ standards <- reactive({
   factor.plot <- reactive({
     calculated.conc() %>% 
       mutate(conc_bin = cut(`concDNA(ng/ul)`, breaks = c(-Inf, 2, 5, 10, 20, 40, Inf))) %>% 
+      mutate(fill=case_when(
+        sample=="B" ~ "blank",
+        conc_bin=="(40, Inf]" ~"40+",
+        conc_bin=="(20,40]" ~"20 - 40",
+        conc_bin=="(10,20]" ~"10 - 20",
+        conc_bin=="(5,10]" ~"5 - 10",
+        conc_bin=="(2,5]" ~ "2 - 5",
+        conc_bin=="(-Inf,2]" ~"Less than 2"
+        
+      )) %>% 
       mutate(row = factor(Row, levels = c( "H", "G", "F", "E", "D", "C", "B", "A"))) %>%
-      ggplot(mapping = aes(x = as.numeric(column), y = factor(row), fill = conc_bin))+
+      mutate(fill = factor(fill, levels = c("Less than 2", "2 - 5", "5 - 10", "10 - 20","20 - 40","40+", "blank"))) %>%
+      ggplot(mapping = aes(x = as.numeric(column), y = factor(row), fill = factor(fill)))+
       geom_tile(colour = "white") +
       scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))+
-      scale_fill_manual(values = c("#FBE0D3","#D1DDE6","#ACC3D1",   "#38808F","#661F3F", "#F56D65"  ))+
+      scale_fill_manual(values = c("#FBE0D3","#D1DDE6","#ACC3D1","#38808F","#661F3F", "#F56D65", "#E4E4E4"))+
       theme_linedraw()+
       labs(x = "columns", y = "rows" ,fill = "DNA conc (ng/uL)")
   })
