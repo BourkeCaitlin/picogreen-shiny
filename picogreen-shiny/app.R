@@ -33,6 +33,12 @@ ui <- fluidPage(
       numericInput(inputId = "dilution",
                    label = "Volume (uL) of sample added to dye/TE solution:",
                    value = 1),
+      numericInput(inputId = "totalPool",
+                   label = "Total DNA (ng) required for pool:",
+                   value = 120),
+      numericInput(inputId = "normConc",
+                   label = "Target concentration (ng/uL) for normalising:",
+                   value = 15),
       downloadButton("report", "Generate full report")
       
     ),
@@ -41,7 +47,11 @@ ui <- fluidPage(
     mainPanel(
       plotOutput("std.curve.plot"),
       DTOutput("calculations"),
-      plotOutput("plot.factor.grid")
+      plotOutput("plot.factor.grid"),
+      h3("Volume of water required to acheive normalised concentration:"),
+      plotOutput("factorPlotWaterDil_grid"),
+      h3("Plate DNA concentrations:"),
+      plotOutput("factorPlotConc_grid")
   
     )
   )
@@ -132,13 +142,16 @@ standards <- reactive({
     all() %>%
       mutate(adjFluor = Fluorescence - background()) %>% 
       mutate(`concDNA(ng/ul)` =(slope()*adjFluor+intercept())*200/input$dilution) %>%
-      dplyr::select(Location, sample, Fluorescence,adjFluor, `concDNA(ng/ul)`, Row, column)
+      mutate(waterDil = `concDNA(ng/ul)` - input$normConc) %>% 
+      mutate(DNAadd= input$normConc) %>% 
+      mutate(volumePool= (input$totalPool)/(input$normConc)) %>% 
+      dplyr::select(Location, sample, Fluorescence,adjFluor, `concDNA(ng/ul)`, Row, column, waterDil, DNAadd, volumePool)
   })
   
   
   DT.values <- reactive({
     calculated.conc() %>% 
-      dplyr::select(Location, sample, Fluorescence,adjFluor, `concDNA(ng/ul)`) %>% 
+      dplyr::select(Location, sample, Fluorescence,adjFluor, `concDNA(ng/ul)`, waterDil,  DNAadd, volumePool) %>% 
       filter(!sample=="B") %>%
       filter(!str_detect(sample, "S")) %>% 
       datatable() %>% 
@@ -157,7 +170,6 @@ standards <- reactive({
         conc_bin=="(5,10]" ~"5 - 10",
         conc_bin=="(2,5]" ~ "2 - 5",
         conc_bin=="(-Inf,2]" ~"Less than 2"
-        
       )) %>% 
       mutate(row = factor(Row, levels = c( "H", "G", "F", "E", "D", "C", "B", "A"))) %>%
       mutate(fill = factor(fill, levels = c("Less than 2", "2 - 5", "5 - 10", "10 - 20","20 - 40","40+", "blank"))) %>%
@@ -168,6 +180,51 @@ standards <- reactive({
       theme_linedraw()+
       labs(x = "columns", y = "rows" ,fill = "DNA conc (ng/uL)")
   })
+  
+  
+  factorPlotWaterDil <- reactive({
+   calculated.conc() %>% 
+      mutate(conc_bin = cut(`concDNA(ng/ul)`, breaks = c(-Inf, 2, 5, 10, 20, 40, Inf))) %>% 
+      mutate(fill=case_when(
+        sample=="B" ~ "blank",
+        str_detect(sample, "S")~"standard",
+        waterDil<0~"too low to normalise",
+        TRUE~"DNA"
+      )) %>% 
+       mutate(fill2=case_when(
+        sample=="B" ~ "blank",
+        conc_bin=="(40, Inf]" ~"40+",
+        conc_bin=="(20,40]" ~"20 - 40",
+        conc_bin=="(10,20]" ~"10 - 20",
+        conc_bin=="(5,10]" ~"5 - 10",
+        conc_bin=="(2,5]" ~ "2 - 5",
+        conc_bin=="(-Inf,2]" ~"Less than 2"
+      )) %>% 
+      mutate(row = factor(Row, levels = c( "H", "G", "F", "E", "D", "C", "B", "A"))) %>%
+      mutate(fill = factor(fill, levels = c("DNA", "standard","too low to normalise", "blank"))) %>% 
+      mutate(fill2 = factor(fill2, levels = c("Less than 2", "2 - 5", "5 - 10", "10 - 20","20 - 40","40+", "blank"))) 
+  })
+  
+  waterPlot <- reactive({
+    ggplot(data = factorPlotWaterDil(), mapping = aes(x = as.numeric(column), y = as.factor(row), fill = factor(fill), label = waterDil))+
+      geom_tile(colour = "white") +
+      geom_text(data = factorPlotWaterDil()[!(factorPlotWaterDil()$sample=="B"|factorPlotWaterDil()$fill=="standard"),], aes(label = round(waterDil,1)))+
+      scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))+
+      scale_fill_manual(values = c("cornflowerblue","orange", "red","#E4E4E4"))+
+      theme_linedraw()+
+      labs(x = "columns", y = "rows" ,fill = "sample")
+  })
+  
+ 
+ concPlot <- reactive({
+   ggplot(data = factorPlotWaterDil(), mapping = aes(x = as.numeric(column), y = as.factor(row), fill = factor(fill2), label = `concDNA(ng/ul)`))+
+     geom_tile(aes(fill = factor(fill2)),colour = "white") +
+     geom_text(data = factorPlotWaterDil()[!factorPlotWaterDil()$sample=="B",], aes(label = round(`concDNA(ng/ul)`,2)))+
+     scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))+
+     scale_fill_manual(values = c("#FBE0D3","#D1DDE6","#ACC3D1","#38808F","#661F3F", "#F56D65", "#E4E4E4"))+
+     theme_linedraw()+
+     labs(x = "columns", y = "rows" ,fill = "sample")
+ })
   
   
   
@@ -186,6 +243,15 @@ output$plot.factor.grid <-renderPlot({
   factor.plot()
 })
 
+
+output$factorPlotWaterDil_grid <- renderPlot({
+  waterPlot()
+})
+
+output$factorPlotConc_grid <- renderPlot({
+  concPlot()
+})
+
 output$report <- downloadHandler(
   filename = paste0(Sys.Date(),"_picogreen-report.html"),
   content = function(file) {
@@ -194,7 +260,15 @@ output$report <- downloadHandler(
     params <- list(plotstdcurve = stdcurve_plot(),
                    list_calculations = calculated.conc(),
                    platename = input$platename,
-                  factor.plot = factor.plot())
+                   TEdil = input$dilution,
+                   totalPool = input$totalPool,
+                   waterDils = DT.values(),
+                   normConc = input$normConc,
+                  factor.plot = factor.plot(),
+                  water.plot = waterPlot(),
+                  conc.plot = concPlot(),
+                  factorPlotWaterDil = factorPlotWaterDil()
+                  )
     rmarkdown::render(tempReport, 
                       output_file = file,
                       params = params,

@@ -9,21 +9,42 @@ params:
   list_calculations: NA
   platename: NA
   factor.plot: NA
+  water.plot: NA
+  conc.plot: NA
+  TEdil: NA
+  totalPool: NA
+  normConc: NA
+  waterDils: NA
+  factorPlotWaterDil: NA
 ---
-#### `r params$platename`
+
+
+## `r params$platename`
+Samples are being normalised at **`r params$normConc` ng/uL** with water
+
+To put into a pool with **`r params$totalPool` ng ** of each of the markers
+
+In this picogreen assay, samples were diluted at `r params$TEdil` uL DNA (1:200)
+
 #### `r Sys.Date()`
 
-##   {.tabset}
+##  {.tabset}
+
 ### Calculations
+
+
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = F)
 library(tidyverse)
 library(knitr)
+library(patchwork)
 ```
 
 ```{r}
-datatable(params$list_calculations %>% 
-      dplyr::select(Location, sample, Fluorescence,adjFluor, `concDNA(ng/ul)`) %>% 
+datatable(params$factorPlotWaterDil %>% 
+      dplyr::select(Location, sample, Fluorescence,adjFluor, `concDNA(ng/ul)`, waterDil, DNAadd, volumePool, conc_bin, fill) %>%
       filter(!sample=="B") %>%
       filter(!str_detect(sample, "S")), extensions = "Buttons",
                 options = list(dom = "frtipB",
@@ -37,19 +58,26 @@ datatable(params$list_calculations %>%
                 style = "bootstrap")
 ```
 
-
 ### Plot of standard curve
+
 ```{r}
 params$plotstdcurve
 ```
 
-
 ### Sample concentrations
-```{r}
+
+```{r fig.width=10, fig.height=5}
 params$factor.plot
 ```
+
+### Water required for normalisation to `r params$normConc` ng/uL
+
+```{r fig.width=12, fig.height=10}
+params$water.plot/params$conc.plot
+```
+
+
 
 ```{r}
 write.csv(params$list_calculations, file = paste0(params$platename,".csv"))
 ```
-
