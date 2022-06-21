@@ -11,9 +11,7 @@ ui <- fluidPage(
   # Application title
 
   h1("PICOGREEN CALCULATION OF DNA CONCENTRATION :", style="color:#214455;  padding:15px; font-weight: bold; font: rockwell; letter-spacing: 5px"),
-  
-  
-  
+
   # Sidebar setup 
   sidebarLayout(
     sidebarPanel(
@@ -98,10 +96,11 @@ values <- reactive({
  })
 #This is the current dilution series for the standard curve - evidently would need adjusting if this changes. Could also make as a radiobutton
 stand.val <- c(0.75,0.375,0.1875,0.09375,0.046875,0.0234375,0.01171875,0)
+standard_labels <- c("S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8")
 
 standards <- reactive({
   all() %>%
-      filter(str_detect(sample, "S")) %>%
+      filter(sample%in%standard_labels) %>%
       group_by(sample) %>%
       summarize(m = mean(Fluorescence))
 })
