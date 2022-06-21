@@ -1,6 +1,8 @@
 # picogreen-shiny
-A shiny interface for use with the picogreen assay to determine DNA concentration for a plate of samples.
 
-* write csv and Rds in Rmd report (unsure)
-*changed blanks to grey colour (done)
+Tool for calculating DNA concentration using the picogreen assay measuring fluorescence
 
+Currently works well with correctly formatted files (ie if I am using it), however as a tool that others might want to use, this repository is still work in progress...
+
+- write documentation for input requirements and layouts
+- separate pooling methods, the current normalisation plot was written for a specific pooling method that might not be always applicable
