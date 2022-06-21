@@ -41,7 +41,7 @@ ui <- fluidPage(
       
     ),
     
-    # Show a plot of the generated distribution
+   
     mainPanel(
       plotOutput("std.curve.plot"),
       DTOutput("calculations"),
@@ -55,7 +55,6 @@ ui <- fluidPage(
   )
 )
 
-# Define server logic required to draw a histogram
 
 server <- function(input, output, session) {
   
